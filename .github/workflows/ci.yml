@@ -1,0 +1,88 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        php: ['8.4', '8.5']
+    name: PHP ${{ matrix.php }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+
+      - name: Install dependencies
+        run: composer update --no-interaction --prefer-dist
+
+      - name: Save composer files for comparison
+        run: |
+          cp composer.json composer.json.orig
+          cp composer.lock composer.lock.orig
+
+      - name: Verify phpunit is installed
+        run: vendor/bin/phpunit --version
+
+      - name: Verify phpstan is NOT installed yet
+        run: test ! -f vendor/bin/phpstan
+
+      # --- plugin:require ---
+
+      - name: Sideload phpstan
+        run: composer plugin:require phpstan/phpstan:^2.1
+
+      - name: Verify composer.json unchanged
+        run: diff composer.json composer.json.orig
+
+      - name: Verify composer.lock unchanged
+        run: diff composer.lock composer.lock.orig
+
+      - name: Verify composer-plugins.json created
+        run: |
+          test -f composer-plugins.json
+          grep -q '"phpstan/phpstan"' composer-plugins.json
+
+      - name: Verify phpstan is installed and works
+        run: vendor/bin/phpstan --version
+
+      - name: Verify phpunit still works
+        run: vendor/bin/phpunit --version
+
+      # --- plugin:remove ---
+
+      - name: Remove sideloaded phpstan
+        run: composer plugin:remove phpstan/phpstan
+
+      - name: Verify phpstan removed from vendor
+        run: test ! -f vendor/bin/phpstan
+
+      - name: Verify phpunit still works after remove
+        run: vendor/bin/phpunit --version
+
+      # --- post-install hook ---
+
+      - name: Re-sideload phpstan for hook test
+        run: composer plugin:require phpstan/phpstan:^2.1
+
+      - name: Verify phpstan works before reinstall
+        run: vendor/bin/phpstan --version
+
+      - name: Run composer install (should remove then restore sideloaded packages via hook)
+        run: composer install --no-interaction
+
+      - name: Verify phpstan restored by post-install hook
+        run: vendor/bin/phpstan --version
+
+      - name: Verify phpunit still works after reinstall
+        run: vendor/bin/phpunit --version
+
+      - name: Verify composer.json still unchanged
+        run: diff composer.json composer.json.orig

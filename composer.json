@@ -1,0 +1,27 @@
+{
+    "name": "jellyfrog/composer-sideload-plugin-example",
+    "description": "Example project demonstrating composer-sideload-plugin",
+    "type": "project",
+    "license": "MIT",
+    "require": {
+        "php": "^8.4",
+        "llava9/composer-sideload-plugin": "dev-main"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^13.0"
+    },
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/Jellyfrog/composer-sideload-plugin.git"
+        }
+    ],
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "config": {
+        "allow-plugins": {
+            "llava9/composer-sideload-plugin": true
+        },
+        "sort-packages": true
+    }
+}
